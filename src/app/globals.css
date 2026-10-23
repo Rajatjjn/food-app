@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 26, 26, 26;
+  --background-start-rgb: 254, 252, 248;
+  --background-end-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: #fdfbf7;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  min-height: 100vh;
+}
+
+/* Warm badge & accent utilities */
+.badge-veg {
+  @apply bg-emerald-50 text-emerald-800 border border-emerald-200;
+}
+
+.badge-jain {
+  @apply bg-teal-50 text-teal-800 border border-teal-200;
+}
+
+.badge-nonveg {
+  @apply bg-orange-50 text-orange-800 border border-orange-200;
+}
+
+.badge-verified {
+  @apply bg-amber-50 text-amber-900 border border-amber-300;
+}
+
+/* Glassmorphism accents */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(229, 231, 235, 0.7);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f5f3ef;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4cfc5;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b8b1a3;
+}

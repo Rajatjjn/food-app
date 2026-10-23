@@ -1,0 +1,404 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User & Role-based authentication
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         String    @default("CUSTOMER") // CUSTOMER, PROVIDER, ADMIN
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  customerProfile  CustomerProfile?
+  providerProfile  ProviderProfile?
+  reviews          Review[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model CustomerProfile {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  preferredCity       String   @default("Pune")
+  preferredLocality   String?
+  dietaryPreferences  String?  // JSON array string e.g. ["VEGETARIAN", "JAIN"]
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  favourites    Favourite[]
+  enquiries     Enquiry[]
+  trialRequests TrialRequest[]
+  orders        Order[]
+  subscriptions MealSubscription[]
+}
+
+model ProviderProfile {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName         String
+  slug                 String   @unique
+  businessType         String   @default("HOME_COOK") // HOME_COOK, SMALL_TIFFIN, MEAL_PROVIDER
+  description          String
+  contactPhone         String
+  contactEmail         String?
+  whatsappNumber       String
+  profileImage         String?
+  coverImage           String?
+  city                 String   @default("Pune")
+  locality             String
+  pincode              String
+  fullAddress          String?
+  deliveryRadiusKm     Float    @default(5.0)
+  deliveryMethod       String   @default("DIRECT_DELIVERY") // DIRECT_DELIVERY, PICKUP, BOTH
+  deliveryFeeMinor     Int      @default(0) // In paise / cents (e.g. 2000 = 20 INR)
+  minOrderAmountMinor  Int      @default(0)
+  isVegetarianOnly     Boolean  @default(false)
+  dietaryCategories    String   @default("[\"VEG\"]") // JSON array string
+  operatesLunch        Boolean  @default(true)
+  operatesDinner       Boolean  @default(true)
+  lunchCutoffTime      String   @default("10:30")
+  dinnerCutoffTime     String   @default("18:30")
+  lunchDeliveryWindow  String   @default("12:00 - 14:00")
+  dinnerDeliveryWindow String   @default("19:30 - 21:30")
+  weeklyOperatingDays  String   @default("[\"MON\",\"TUE\",\"WED\",\"THU\",\"FRI\",\"SAT\",\"SUN\"]")
+  isTemporarilyClosed  Boolean  @default(false)
+  closureNotice        String?
+  status               String   @default("APPROVED") // PENDING, APPROVED, REJECTED, SUSPENDED
+  verifiedBadge        Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  serviceAreas    ProviderServiceArea[]
+  menus           Menu[]
+  mealPlans       MealPlan[]
+  menuTemplates   MenuTemplate[]
+  favourites      Favourite[]
+  enquiries       Enquiry[]
+  trialRequests   TrialRequest[]
+  orders          Order[]
+  subscriptions   MealSubscription[]
+  reviews         Review[]
+  verifications   ProviderVerification[]
+
+  @@index([city, locality])
+  @@index([status])
+  @@index([slug])
+}
+
+model ProviderVerification {
+  id                String    @id @default(uuid())
+  providerId        String
+  provider          ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  verifiedAt        DateTime?
+  verifiedByAdminId String?
+  fssaiNumber       String?
+  remarks           String?
+  createdAt         DateTime  @default(now())
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  city      String
+  locality  String
+  pincode   String
+  state     String   @default("Maharashtra")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([city, locality])
+  @@index([city])
+  @@index([pincode])
+}
+
+model ProviderServiceArea {
+  id                   String   @id @default(uuid())
+  providerId           String
+  provider             ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  locality             String
+  pincode              String
+  deliveryFeeMinor     Int      @default(0)
+  minOrderMinor        Int      @default(0)
+  estimatedDeliveryMin Int      @default(30)
+  createdAt            DateTime @default(now())
+
+  @@index([providerId])
+  @@index([locality])
+}
+
+model Menu {
+  id                String     @id @default(uuid())
+  providerId        String
+  provider          ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  date              String     // YYYY-MM-DD
+  mealType          String     // LUNCH, DINNER
+  title             String
+  priceMinor        Int        // in paise, e.g. 12000 = Rs. 120
+  availableQuantity Int        @default(50)
+  status            String     @default("PUBLISHED") // DRAFT, SCHEDULED, PUBLISHED, SOLD_OUT, UNAVAILABLE
+  cutoffTime        String?
+  deliveryWindow    String?
+  dietaryTags       String     @default("[\"VEG\"]") // JSON array string
+  allergenNotes     String?
+  customerNotes     String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  items             MenuItem[]
+
+  @@unique([providerId, date, mealType])
+  @@index([providerId, date])
+  @@index([date, mealType, status])
+}
+
+model MenuItem {
+  id           String   @id @default(uuid())
+  menuId       String
+  menu         Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  category     String   @default("MAIN") // BREAD, RICE, MAIN, CURRY, DESSERT, SALAD, EXTRA
+  isAvailable  Boolean  @default(true)
+  isVegetarian Boolean  @default(true)
+  sortOrder    Int      @default(0)
+
+  @@index([menuId])
+}
+
+model MenuTemplate {
+  id          String   @id @default(uuid())
+  providerId  String
+  provider    ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  dayOfWeek   String   // MON, TUE, WED, THU, FRI, SAT, SUN
+  mealType    String   // LUNCH, DINNER
+  title       String
+  priceMinor  Int
+  itemsJson   String   // JSON array of dish names
+  createdAt   DateTime @default(now())
+
+  @@index([providerId])
+}
+
+model MealPlan {
+  id                     String   @id @default(uuid())
+  providerId             String
+  provider               ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  name                   String
+  planType               String   // SINGLE_MEAL, WEEKLY, MONTHLY_LUNCH, MONTHLY_DINNER, MONTHLY_BOTH, CUSTOM
+  description            String
+  priceMinor             Int      // Total plan price in paise
+  mealsCount             Int      // Total meals in cycle
+  serviceDaysPerWeek     Int      @default(6)
+  effectiveCostPerMealMinor Int   // Calculated cost per meal in paise
+  dietaryCategories      String   @default("[\"VEG\"]")
+  hasTrial               Boolean  @default(true)
+  trialPriceMinor        Int?     // Special trial price
+  pauseRules             String?  // e.g. "Up to 3 pause days with 24hr advance notice"
+  cancellationPolicy     String?
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  subscriptions MealSubscription[]
+
+  @@index([providerId])
+}
+
+model Favourite {
+  id          String   @id @default(uuid())
+  customerId  String
+  customer    CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  providerId  String
+  provider    ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([customerId, providerId])
+  @@index([customerId])
+}
+
+model Enquiry {
+  id               String   @id @default(uuid())
+  referenceNo      String   @unique
+  customerId       String?
+  customer         CustomerProfile? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  providerId       String
+  provider         ProviderProfile  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  customerName     String
+  customerPhone    String
+  customerEmail    String?
+  message          String
+  status           String   @default("PENDING") // PENDING, RESPONDED, CLOSED
+  providerResponse String?
+  respondedAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([providerId, status])
+  @@index([customerId])
+}
+
+model TrialRequest {
+  id                String   @id @default(uuid())
+  referenceNo       String   @unique
+  customerId        String?
+  customer          CustomerProfile? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  providerId        String
+  provider          ProviderProfile  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  customerName      String
+  customerPhone     String
+  requestedDate     String   // YYYY-MM-DD
+  mealType          String   // LUNCH, DINNER
+  mealCount         Int      @default(1)
+  deliveryLocality  String
+  deliveryAddress   String
+  dietaryPreference String   @default("VEG") // VEG, JAIN, NON_VEG
+  notes             String?
+  status            String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, CANCELLED, COMPLETED
+  providerResponse  String?
+  respondedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([providerId, status])
+  @@index([customerId])
+}
+
+model Order {
+  id                  String   @id @default(uuid())
+  orderNumber         String   @unique
+  customerId          String
+  customer            CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  providerId          String
+  provider            ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  deliveryDate        String
+  mealType            String
+  totalAmountMinor    Int
+  status              String   @default("CONFIRMED") // PENDING, CONFIRMED, DELIVERED, CANCELLED
+  deliveryAddress     String
+  specialInstructions String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  items OrderItem[]
+
+  @@index([customerId])
+  @@index([providerId])
+}
+
+model OrderItem {
+  id             String @id @default(uuid())
+  orderId        String
+  order          Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemName   String
+  quantity       Int    @default(1)
+  unitPriceMinor Int
+}
+
+model MealSubscription {
+  id                 String   @id @default(uuid())
+  subscriptionNumber String   @unique
+  customerId         String
+  customer           CustomerProfile @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  providerId         String
+  provider           ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  mealPlanId         String
+  mealPlan           MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  startDate          String
+  endDate            String
+  totalMeals         Int
+  remainingMeals     Int
+  status             String   @default("ACTIVE") // ENQUIRY, PENDING, ACTIVE, PAUSED, COMPLETED, CANCELLED
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([providerId])
+}
+
+model Review {
+  id                  String   @id @default(uuid())
+  providerId          String
+  provider            ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  customerId          String
+  customer            User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  overallRating       Int      // 1 to 5
+  tasteRating         Int      // 1 to 5
+  quantityRating      Int      // 1 to 5
+  packagingRating     Int      // 1 to 5
+  punctualityRating   Int      // 1 to 5
+  comment             String
+  isVerifiedPurchase  Boolean  @default(false)
+  providerReply       String?
+  replyCreatedAt      DateTime?
+  status              String   @default("PUBLISHED") // PUBLISHED, REPORTED, HIDDEN
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  reports ReviewReport[]
+
+  @@index([providerId, status])
+  @@index([customerId])
+}
+
+model ReviewReport {
+  id               String   @id @default(uuid())
+  reviewId         String
+  review           Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reportedByUserId String
+  reason           String
+  status           String   @default("PENDING") // PENDING, REVIEWED, DISMISSED
+  createdAt        DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  link      String?
+  type      String   @default("INFO") // INFO, TRIAL_REQUEST, ENQUIRY, MENU_REMINDER, VERIFICATION
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action       String   // e.g. "APPROVE_PROVIDER", "UPDATE_MENU"
+  resourceType String   // e.g. "PROVIDER", "MENU", "REVIEW"
+  resourceId   String?
+  details      String?  // JSON string
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  @@index([action])
+  @@index([resourceType])
+}
+
+model PlatformSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
