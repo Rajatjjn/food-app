@@ -32,6 +32,20 @@ export default function CustomerDashboardPage() {
   const [enquiries, setEnquiries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Dynamic location states
+  const [locationDirectory, setLocationDirectory] = useState<{
+    cities: Record<string, Array<{ id: string; locality: string; pincode: string }>>;
+    cityNames: string[];
+  }>({ cities: {}, cityNames: [] });
+
+  const [profileForm, setProfileForm] = useState({
+    preferredCity: "Pune",
+    preferredLocality: "",
+    notes: "",
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
+
   // Review modal state
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedProviderForReview, setSelectedProviderForReview] = useState<any>(null);
@@ -42,7 +56,23 @@ export default function CustomerDashboardPage() {
 
   useEffect(() => {
     fetchCustomerData();
+    fetchLocations();
   }, []);
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch("/api/locations");
+      const data = await res.json();
+      if (data.cities) {
+        setLocationDirectory({
+          cities: data.cities,
+          cityNames: data.cityNames || Object.keys(data.cities),
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching locations:", err);
+    }
+  };
 
   const fetchCustomerData = async () => {
     setLoading(true);
@@ -54,6 +84,15 @@ export default function CustomerDashboardPage() {
         return;
       }
       setUser(userData.user);
+
+      // Populate preferences
+      if (userData.user.customerProfile) {
+        setProfileForm({
+          preferredCity: userData.user.customerProfile.preferredCity || "Pune",
+          preferredLocality: userData.user.customerProfile.preferredLocality || "",
+          notes: userData.user.customerProfile.notes || "",
+        });
+      }
 
       // Fetch trials
       const trialsRes = await fetch("/api/trials");
@@ -182,6 +221,14 @@ export default function CustomerDashboardPage() {
           }`}
         >
           Meal Subscriptions
+        </button>
+        <button
+          onClick={() => setActiveTab("PROFILE")}
+          className={`pb-3 relative whitespace-nowrap transition-colors ${
+            activeTab === "PROFILE" ? "text-brand-600 border-b-2 border-brand-600" : "text-stone-500 hover:text-stone-800"
+          }`}
+        >
+          Location & Preferences
         </button>
       </div>
 
@@ -372,6 +419,124 @@ export default function CustomerDashboardPage() {
           <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200 inline-block text-xs text-stone-600">
             Online recurring automated payments & pause controls are slated for Phase 2.
           </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: LOCATION & PREFERENCES */}
+      {activeTab === "PROFILE" && (
+        <div className="p-6 sm:p-8 rounded-3xl bg-white border border-stone-200 shadow-xs space-y-6">
+          <div className="border-b border-stone-100 pb-4">
+            <h3 className="text-lg font-bold text-stone-900">Your Discovery Location & Preferences</h3>
+            <p className="text-xs text-stone-500 mt-0.5">
+              Set your home city and locality to see personalized menus and delivery timings.
+            </p>
+          </div>
+
+          {profileMessage && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{profileMessage}</span>
+            </div>
+          )}
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setSavingProfile(true);
+              setProfileMessage("");
+              try {
+                const res = await fetch("/api/customer/profile", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(profileForm),
+                });
+                if (res.ok) {
+                  setProfileMessage("Location preferences updated successfully!");
+                  setTimeout(() => setProfileMessage(""), 3000);
+                }
+              } catch (err) {
+                console.error(err);
+              } finally {
+                setSavingProfile(false);
+              }
+            }}
+            className="space-y-4 max-w-lg"
+          >
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                Preferred City
+              </label>
+              <select
+                value={profileForm.preferredCity}
+                onChange={(e) =>
+                  setProfileForm({
+                    ...profileForm,
+                    preferredCity: e.target.value,
+                    preferredLocality: "",
+                  })
+                }
+                className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold"
+              >
+                {locationDirectory.cityNames.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                Preferred Locality / Neighborhood
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Kothrud, Hinjewadi, Viman Nagar"
+                value={profileForm.preferredLocality}
+                onChange={(e) => setProfileForm({ ...profileForm, preferredLocality: e.target.value })}
+                className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium"
+              />
+              {/* Quick suggestions */}
+              {locationDirectory.cities[profileForm.preferredCity]?.length > 0 && (
+                <div className="mt-2">
+                  <span className="text-[11px] text-stone-400 block mb-1">Known areas in {profileForm.preferredCity}:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {locationDirectory.cities[profileForm.preferredCity].slice(0, 8).map((loc) => (
+                      <button
+                        key={loc.id}
+                        type="button"
+                        onClick={() => setProfileForm({ ...profileForm, preferredLocality: loc.locality })}
+                        className="text-[10px] px-2 py-0.5 rounded-md bg-stone-100 hover:bg-brand-50 hover:text-brand-700 text-stone-600 border border-stone-200 transition-colors"
+                      >
+                        {loc.locality}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                Dietary Notes (e.g. Less spicy, Vegetarian only, Diabetic friendly)
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Share any special preferences for tiffins..."
+                value={profileForm.notes}
+                onChange={(e) => setProfileForm({ ...profileForm, notes: e.target.value })}
+                className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={savingProfile}
+              className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-xs"
+            >
+              {savingProfile ? "Saving..." : "Save Preferences"}
+            </button>
+          </form>
         </div>
       )}
 

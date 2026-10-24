@@ -37,10 +37,32 @@ function SearchContent() {
   const [loading, setLoading] = useState(true);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
-  // Available localities by city
-  const cityLocalities: Record<string, string[]> = {
+  // Dynamic localities by city loaded from API
+  const [citiesData, setCitiesData] = useState<Record<string, string[]>>({
     Pune: ["Kothrud", "Baner", "Hinjawadi Phase 1", "Viman Nagar", "Kalyani Nagar", "Karve Nagar", "Wakad"],
     Bengaluru: ["Koramangala", "HSR Layout", "Indiranagar"],
+  });
+  const [cityNames, setCityNames] = useState<string[]>(["Pune", "Bengaluru"]);
+
+  useEffect(() => {
+    fetchLocations();
+  }, []);
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch("/api/locations");
+      const data = await res.json();
+      if (data.cities && data.cityNames) {
+        const mapped: Record<string, string[]> = {};
+        for (const c of data.cityNames) {
+          mapped[c] = (data.cities[c] || []).map((a: any) => a.locality);
+        }
+        setCitiesData(mapped);
+        setCityNames(data.cityNames);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   useEffect(() => {
@@ -175,19 +197,41 @@ function SearchContent() {
 
           {/* City & Locality */}
           <div className="space-y-3">
-            <label className="text-xs font-bold uppercase tracking-wider text-stone-500">Locality ({city})</label>
-            <select
-              value={locality}
-              onChange={(e) => setLocality(e.target.value)}
-              className="w-full text-xs p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-800"
-            >
-              <option value="">All Localities in {city}</option>
-              {(cityLocalities[city] || []).map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
-                </option>
-              ))}
-            </select>
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wider text-stone-500 block mb-1">City</label>
+              <select
+                value={city}
+                onChange={(e) => {
+                  setCity(e.target.value);
+                  setLocality("");
+                }}
+                className="w-full text-xs p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-800 font-medium"
+              >
+                {cityNames.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wider text-stone-500 block mb-1">
+                Locality / Area ({city})
+              </label>
+              <select
+                value={locality}
+                onChange={(e) => setLocality(e.target.value)}
+                className="w-full text-xs p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-800"
+              >
+                <option value="">All Localities in {city}</option>
+                {(citiesData[city] || []).map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Meal Timing */}
@@ -363,14 +407,32 @@ function SearchContent() {
 
             <div className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold mb-1">Locality</label>
+                <label className="block font-semibold mb-1">City</label>
+                <select
+                  value={city}
+                  onChange={(e) => {
+                    setCity(e.target.value);
+                    setLocality("");
+                  }}
+                  className="w-full p-2 border rounded-lg bg-white"
+                >
+                  {cityNames.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Locality ({city})</label>
                 <select
                   value={locality}
                   onChange={(e) => setLocality(e.target.value)}
-                  className="w-full p-2 border rounded-lg"
+                  className="w-full p-2 border rounded-lg bg-white"
                 >
                   <option value="">All Localities in {city}</option>
-                  {(cityLocalities[city] || []).map((loc) => (
+                  {(citiesData[city] || []).map((loc) => (
                     <option key={loc} value={loc}>
                       {loc}
                     </option>

@@ -151,6 +151,21 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Auto-register locality and city in global Location directory
+    await prisma.location.upsert({
+      where: {
+        city_locality: { city: data.city.trim(), locality: data.locality.trim() },
+      },
+      update: { pincode: data.pincode.trim(), isActive: true },
+      create: {
+        city: data.city.trim(),
+        locality: data.locality.trim(),
+        pincode: data.pincode.trim(),
+        state: "India",
+        isActive: true,
+      },
+    });
+
     // Add or update primary service area
     const existingArea = await prisma.providerServiceArea.findFirst({
       where: { providerId: profile.id, locality: data.locality },

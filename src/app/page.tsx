@@ -109,14 +109,31 @@ export default async function HomePage() {
   const formattedFeatured = featuredProviders.map(mapProvider);
   const formattedToday = todayUpdatedProviders.map(mapProvider);
 
-  const popularLocalities = [
-    { name: "Kothrud", city: "Pune", count: "3+ Services" },
-    { name: "Baner", city: "Pune", count: "2+ Services" },
-    { name: "Viman Nagar", city: "Pune", count: "2+ Services" },
-    { name: "Hinjawadi Phase 1", city: "Pune", count: "IT Hub Delivery" },
-    { name: "Koramangala", city: "Bengaluru", count: "Expanding" },
-    { name: "HSR Layout", city: "Bengaluru", count: "Expanding" },
-  ];
+  // Query dynamic locations from database with real provider count
+  const dbLocations = await prisma.location.findMany({
+    where: { isActive: true },
+    take: 6,
+    orderBy: { locality: "asc" },
+  });
+
+  const popularLocalities = await Promise.all(
+    dbLocations.map(async (loc) => {
+      const count = await prisma.providerProfile.count({
+        where: {
+          status: "APPROVED",
+          OR: [
+            { locality: loc.locality },
+            { serviceAreas: { some: { locality: loc.locality } } },
+          ],
+        },
+      });
+      return {
+        name: loc.locality,
+        city: loc.city,
+        count: count > 0 ? `${count} Active ${count === 1 ? "Service" : "Services"}` : "Expanding",
+      };
+    })
+  );
 
   return (
     <div className="space-y-16 pb-16">

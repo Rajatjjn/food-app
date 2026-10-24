@@ -17,6 +17,12 @@ import {
   Copy,
   ExternalLink,
   Users,
+  MapPin,
+  Trash2,
+  Save,
+  Edit3,
+  Building2,
+  Navigation,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { evaluateMenuFreshness } from "@/lib/time";
@@ -30,9 +36,46 @@ export default function ProviderOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState("");
 
+  // Dynamic location states
+  const [locationDirectory, setLocationDirectory] = useState<{
+    cities: Record<string, Array<{ id: string; locality: string; pincode: string }>>;
+    cityNames: string[];
+  }>({ cities: {}, cityNames: [] });
+
+  const [isEditingLocations, setIsEditingLocations] = useState(false);
+  const [savingLocations, setSavingLocations] = useState(false);
+  const [locationForm, setLocationForm] = useState({
+    city: "",
+    locality: "",
+    pincode: "",
+    deliveryRadiusKm: 5,
+    deliveryFee: 0,
+    serviceAreas: [] as Array<{ locality: string; pincode: string }>,
+  });
+  const [isCustomCity, setIsCustomCity] = useState(false);
+  const [customCityName, setCustomCityName] = useState("");
+  const [newAreaLocality, setNewAreaLocality] = useState("");
+  const [newAreaPincode, setNewAreaPincode] = useState("");
+
   useEffect(() => {
     fetchProviderData();
+    fetchLocations();
   }, []);
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch("/api/locations");
+      const data = await res.json();
+      if (data.cities) {
+        setLocationDirectory({
+          cities: data.cities,
+          cityNames: data.cityNames || Object.keys(data.cities),
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching locations:", err);
+    }
+  };
 
   const fetchProviderData = async () => {
     setLoading(true);
@@ -49,7 +92,24 @@ export default function ProviderOverviewPage() {
         return;
       }
 
-      setProvider(authData.user.providerProfile);
+      // Fetch full provider profile including serviceAreas
+      const profileRes = await fetch("/api/provider/profile");
+      const profileData = await profileRes.json();
+      const profile = profileData.profile || authData.user.providerProfile;
+      setProvider(profile);
+
+      // Populate location edit form
+      setLocationForm({
+        city: profile.city || "Pune",
+        locality: profile.locality || "",
+        pincode: profile.pincode || "",
+        deliveryRadiusKm: profile.deliveryRadiusKm || 5,
+        deliveryFee: (profile.deliveryFeeMinor || 0) / 100,
+        serviceAreas: (profile.serviceAreas || []).map((sa: any) => ({
+          locality: sa.locality,
+          pincode: sa.pincode,
+        })),
+      });
 
       // Fetch menus
       const menusRes = await fetch("/api/menus");
@@ -90,6 +150,70 @@ export default function ProviderOverviewPage() {
     }
   };
 
+  const handleSaveLocations = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingLocations(true);
+    const finalCity = isCustomCity ? customCityName.trim() : locationForm.city.trim();
+
+    try {
+      const res = await fetch("/api/provider/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          city: finalCity,
+          locality: locationForm.locality.trim(),
+          pincode: locationForm.pincode.trim(),
+          deliveryRadiusKm: Number(locationForm.deliveryRadiusKm),
+          deliveryFeeMinor: Math.round(Number(locationForm.deliveryFee) * 100),
+          serviceAreas: locationForm.serviceAreas,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setActionMessage("Kitchen location & service areas updated successfully!");
+        setIsEditingLocations(false);
+        setIsCustomCity(false);
+        setCustomCityName("");
+        await fetchProviderData();
+        await fetchLocations();
+        setTimeout(() => setActionMessage(""), 4000);
+      } else {
+        alert(data.error || "Failed to update locations");
+      }
+    } catch (err) {
+      console.error("Save locations error:", err);
+      alert("Network error updating locations");
+    } finally {
+      setSavingLocations(false);
+    }
+  };
+
+  const handleAddServiceArea = () => {
+    if (!newAreaLocality.trim()) return;
+    const localityToAdd = newAreaLocality.trim();
+    const pincodeToAdd = newAreaPincode.trim() || locationForm.pincode || "411001";
+
+    if (locationForm.serviceAreas.some((sa) => sa.locality.toLowerCase() === localityToAdd.toLowerCase())) {
+      alert("This area is already in your service list");
+      return;
+    }
+
+    setLocationForm({
+      ...locationForm,
+      serviceAreas: [...locationForm.serviceAreas, { locality: localityToAdd, pincode: pincodeToAdd }],
+    });
+    setNewAreaLocality("");
+    setNewAreaPincode("");
+  };
+
+  const handleRemoveServiceArea = (idx: number) => {
+    setLocationForm({
+      ...locationForm,
+      serviceAreas: locationForm.serviceAreas.filter((_, i) => i !== idx),
+    });
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center text-sm text-stone-500">
@@ -103,6 +227,8 @@ export default function ProviderOverviewPage() {
   const todayDinner = menus.find((m) => m.date === today && m.mealType === "DINNER");
   const pendingTrials = trials.filter((t) => t.status === "PENDING");
   const pendingEnquiries = enquiries.filter((e) => e.status === "PENDING");
+
+  const currentAvailableAreas = locationDirectory.cities[locationForm.city] || [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -129,12 +255,15 @@ export default function ProviderOverviewPage() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-900 tracking-tight">
             {provider?.businessName}
           </h1>
-          <p className="text-xs text-stone-500 mt-0.5">
-            Manage your daily menus, incoming trial requests, and student subscriptions
-          </p>
+          <div className="flex items-center gap-2 text-xs text-stone-500 mt-1">
+            <MapPin className="w-3.5 h-3.5 text-brand-600" />
+            <span>
+              {provider?.locality}, {provider?.city} • {provider?.serviceAreas?.length || 0} Delivery Localities
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {provider?.slug && (
             <Link
               href={`/tiffins/${provider.slug}`}
@@ -211,6 +340,318 @@ export default function ProviderOverviewPage() {
           <div className="text-2xl font-black text-stone-900">Manage</div>
           <span className="text-[11px] text-stone-500 block mt-1">Weekly & monthly pricing</span>
         </Link>
+      </div>
+
+      {/* DYNAMIC CITY & SERVICE AREAS SECTION */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-white border border-stone-200 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="p-2 rounded-xl bg-brand-50 text-brand-600">
+                <Navigation className="w-4 h-4" />
+              </span>
+              <h2 className="text-lg font-bold text-stone-900">
+                Dynamic City & Delivery Service Areas
+              </h2>
+            </div>
+            <p className="text-xs text-stone-500 mt-1">
+              Add or expand the cities and neighborhood localities where you deliver tiffins.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setIsEditingLocations(!isEditingLocations)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-800 transition-colors self-start"
+          >
+            <Edit3 className="w-3.5 h-3.5 text-stone-600" />
+            <span>{isEditingLocations ? "Close Editor" : "Edit Cities & Areas"}</span>
+          </button>
+        </div>
+
+        {/* View mode */}
+        {!isEditingLocations ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/80">
+                <span className="text-[11px] font-semibold text-stone-500 block mb-1">Primary Kitchen City</span>
+                <span className="text-base font-extrabold text-stone-900">{provider?.city || "Pune"}</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/80">
+                <span className="text-[11px] font-semibold text-stone-500 block mb-1">Kitchen Locality & Pin</span>
+                <span className="text-base font-extrabold text-stone-900">
+                  {provider?.locality || "Not set"} ({provider?.pincode || "N/A"})
+                </span>
+              </div>
+              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/80">
+                <span className="text-[11px] font-semibold text-stone-500 block mb-1">Delivery Settings</span>
+                <span className="text-base font-extrabold text-stone-900">
+                  Radius: {provider?.deliveryRadiusKm || 5} km • Fee: ₹{(provider?.deliveryFeeMinor || 0) / 100}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">
+                Active Covered Service Localities ({provider?.serviceAreas?.length || 0})
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {provider?.serviceAreas && provider.serviceAreas.length > 0 ? (
+                  provider.serviceAreas.map((sa: any) => (
+                    <span
+                      key={sa.id || sa.locality}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200/70 text-amber-900 text-xs font-bold"
+                    >
+                      <MapPin className="w-3 h-3 text-amber-600" />
+                      <span>{sa.locality}</span>
+                      <span className="text-[10px] text-amber-700 font-medium">({sa.pincode})</span>
+                    </span>
+                  ))
+                ) : (
+                  <p className="text-xs text-stone-500 italic">
+                    No extra service areas configured. You currently deliver to {provider?.locality}.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Edit Form */
+          <form onSubmit={handleSaveLocations} className="space-y-6 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* City Selection */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                  City
+                </label>
+                {!isCustomCity ? (
+                  <select
+                    value={locationForm.city}
+                    onChange={(e) => {
+                      if (e.target.value === "__NEW_CITY__") {
+                        setIsCustomCity(true);
+                      } else {
+                        setLocationForm({ ...locationForm, city: e.target.value });
+                      }
+                    }}
+                    className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-semibold"
+                  >
+                    {locationDirectory.cityNames.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                    <option value="__NEW_CITY__">+ Add new city...</option>
+                  </select>
+                ) : (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Mumbai, Bengaluru, Nagpur"
+                      value={customCityName}
+                      onChange={(e) => setCustomCityName(e.target.value)}
+                      className="w-full p-2.5 bg-white border border-brand-500 rounded-xl text-xs font-semibold focus:outline-hidden ring-2 ring-brand-100"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomCity(false)}
+                      className="text-[11px] text-stone-500 hover:text-stone-800 underline block"
+                    >
+                      Cancel new city
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Kitchen Locality */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                  Kitchen Primary Area / Locality
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Kothrud, Andheri West, Navrangpura"
+                  value={locationForm.locality}
+                  onChange={(e) => setLocationForm({ ...locationForm, locality: e.target.value })}
+                  className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium"
+                />
+              </div>
+
+              {/* Kitchen Pincode */}
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1.5">
+                  Area Pincode
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  placeholder="e.g. 411038"
+                  value={locationForm.pincode}
+                  onChange={(e) => setLocationForm({ ...locationForm, pincode: e.target.value })}
+                  className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Delivery Settings */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Delivery Radius (in Kilometers)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={locationForm.deliveryRadiusKm}
+                  onChange={(e) => setLocationForm({ ...locationForm, deliveryRadiusKm: Number(e.target.value) })}
+                  className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-stone-700 mb-1">
+                  Standard Delivery Fee (₹)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={5}
+                  value={locationForm.deliveryFee}
+                  onChange={(e) => setLocationForm({ ...locationForm, deliveryFee: Number(e.target.value) })}
+                  className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium"
+                />
+              </div>
+            </div>
+
+            {/* Covered Service Areas Builder */}
+            <div className="pt-2 border-t border-stone-100 space-y-3">
+              <label className="block text-xs font-bold text-stone-800">
+                Add Delivery Areas / Localities Covered by Your Kitchen
+              </label>
+
+              {/* Quick Pick existing localities from city directory */}
+              {currentAvailableAreas.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] text-stone-500 font-medium">
+                    Quick-add popular localities in {locationForm.city}:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-stone-50 rounded-xl border border-stone-200">
+                    {currentAvailableAreas.map((loc) => {
+                      const isAdded = locationForm.serviceAreas.some(
+                        (sa) => sa.locality.toLowerCase() === loc.locality.toLowerCase()
+                      );
+                      return (
+                        <button
+                          key={loc.id}
+                          type="button"
+                          onClick={() => {
+                            if (!isAdded) {
+                              setLocationForm({
+                                ...locationForm,
+                                serviceAreas: [
+                                  ...locationForm.serviceAreas,
+                                  { locality: loc.locality, pincode: loc.pincode },
+                                ],
+                              });
+                            }
+                          }}
+                          disabled={isAdded}
+                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-colors ${
+                            isAdded
+                              ? "bg-stone-200 text-stone-400 border-transparent cursor-not-allowed"
+                              : "bg-white hover:bg-brand-50 text-stone-700 border-stone-300 hover:border-brand-300"
+                          }`}
+                        >
+                          + {loc.locality}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Custom Area & Pincode input */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter custom area / neighborhood name"
+                  value={newAreaLocality}
+                  onChange={(e) => setNewAreaLocality(e.target.value)}
+                  className="flex-1 p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium"
+                />
+                <input
+                  type="text"
+                  placeholder="Area pincode"
+                  maxLength={6}
+                  value={newAreaPincode}
+                  onChange={(e) => setNewAreaPincode(e.target.value)}
+                  className="w-full sm:w-36 p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddServiceArea}
+                  className="px-4 py-2.5 bg-stone-900 hover:bg-black text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Area</span>
+                </button>
+              </div>
+
+              {/* Service Areas Tag List */}
+              <div className="pt-2">
+                <span className="text-[11px] font-bold text-stone-600 block mb-2">
+                  Areas currently added to your delivery coverage:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {locationForm.serviceAreas.map((sa, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-50 border border-brand-200 text-brand-900 text-xs font-bold"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-brand-600" />
+                      <span>{sa.locality}</span>
+                      <span className="text-[10px] text-brand-700">({sa.pincode})</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveServiceArea(idx)}
+                        className="ml-1 text-stone-400 hover:text-red-600 p-0.5 rounded-md"
+                        title="Remove area"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                  {locationForm.serviceAreas.length === 0 && (
+                    <span className="text-xs text-stone-400 italic">
+                      No delivery areas selected yet. Add areas above.
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 pt-4 border-t border-stone-100">
+              <button
+                type="submit"
+                disabled={savingLocations}
+                className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-bold shadow-xs flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{savingLocations ? "Saving Changes..." : "Save Location & Service Areas"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsEditingLocations(false)}
+                className="px-4 py-2.5 border border-stone-300 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       {/* Today's Live Menus Quick Status */}

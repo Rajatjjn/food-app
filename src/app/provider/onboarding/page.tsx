@@ -27,9 +27,13 @@ export default function ProviderOnboardingPage() {
   const [contactPhone, setContactPhone] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
 
-  // Step 3: Location
+  // Step 3: Location (Dynamic)
+  const [citiesData, setCitiesData] = useState<Record<string, Array<{ id: string; locality: string; pincode: string }>>>({});
+  const [cityNames, setCityNames] = useState<string[]>(["Pune", "Bengaluru"]);
   const [city, setCity] = useState("Pune");
+  const [isCustomCity, setIsCustomCity] = useState(false);
   const [locality, setLocality] = useState("Kothrud");
+  const [isCustomLocality, setIsCustomLocality] = useState(false);
   const [pincode, setPincode] = useState("411038");
   const [fullAddress, setFullAddress] = useState("");
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(5.0);
@@ -44,7 +48,24 @@ export default function ProviderOnboardingPage() {
 
   useEffect(() => {
     checkAuthSession();
+    fetchLocations();
   }, []);
+
+  const fetchLocations = async () => {
+    try {
+      const res = await fetch("/api/locations");
+      const data = await res.json();
+      if (data.cities && data.cityNames && data.cityNames.length > 0) {
+        setCitiesData(data.cities);
+        setCityNames(data.cityNames);
+        if (!data.cityNames.includes(city)) {
+          setCity(data.cityNames[0]);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const checkAuthSession = async () => {
     try {
@@ -346,28 +367,110 @@ export default function ProviderOnboardingPage() {
                 {currentUser ? "2" : "3"}. Location & Service Radius
               </h3>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold mb-1">City</label>
-                  <select
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-stone-300 bg-white"
-                  >
-                    <option value="Pune">Pune</option>
-                    <option value="Bengaluru">Bengaluru</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-stone-700">City *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomCity(!isCustomCity);
+                        if (!isCustomCity) setCity("");
+                        else setCity(cityNames[0] || "Pune");
+                      }}
+                      className="text-[11px] text-brand-600 font-semibold hover:underline"
+                    >
+                      {isCustomCity ? "Choose existing city" : "+ Add new city"}
+                    </button>
+                  </div>
+
+                  {isCustomCity ? (
+                    <input
+                      type="text"
+                      required
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Enter new city name (e.g. Mumbai)"
+                      className="w-full p-2.5 rounded-xl border border-brand-400 bg-brand-50/30 focus:outline-none focus:border-brand-500 font-medium"
+                    />
+                  ) : (
+                    <select
+                      value={city}
+                      onChange={(e) => {
+                        const newCity = e.target.value;
+                        setCity(newCity);
+                        setIsCustomLocality(false);
+                        const areas = citiesData[newCity];
+                        if (areas && areas.length > 0) {
+                          setLocality(areas[0].locality);
+                          setPincode(areas[0].pincode);
+                        } else {
+                          setLocality("");
+                          setPincode("");
+                        }
+                      }}
+                      className="w-full p-2.5 rounded-xl border border-stone-300 bg-white"
+                    >
+                      {cityNames.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
+
                 <div>
-                  <label className="block font-semibold mb-1">Locality *</label>
-                  <input
-                    type="text"
-                    required
-                    value={locality}
-                    onChange={(e) => setLocality(e.target.value)}
-                    placeholder="e.g. Kothrud / Baner"
-                    className="w-full p-2.5 rounded-xl border border-stone-300"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-stone-700">Locality / Area *</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomLocality(!isCustomLocality);
+                        if (!isCustomLocality) setLocality("");
+                        else {
+                          const areas = citiesData[city];
+                          if (areas && areas.length > 0) {
+                            setLocality(areas[0].locality);
+                            setPincode(areas[0].pincode);
+                          }
+                        }
+                      }}
+                      className="text-[11px] text-brand-600 font-semibold hover:underline"
+                    >
+                      {isCustomLocality ? "Choose from list" : "+ Add custom area"}
+                    </button>
+                  </div>
+
+                  {isCustomLocality || isCustomCity || !citiesData[city] || citiesData[city].length === 0 ? (
+                    <input
+                      type="text"
+                      required
+                      value={locality}
+                      onChange={(e) => setLocality(e.target.value)}
+                      placeholder="Enter area / neighbourhood name"
+                      className="w-full p-2.5 rounded-xl border border-brand-400 bg-brand-50/30 focus:outline-none focus:border-brand-500 font-medium"
+                    />
+                  ) : (
+                    <select
+                      value={locality}
+                      onChange={(e) => {
+                        const selectedName = e.target.value;
+                        setLocality(selectedName);
+                        const area = citiesData[city]?.find((a) => a.locality === selectedName);
+                        if (area) {
+                          setPincode(area.pincode);
+                        }
+                      }}
+                      className="w-full p-2.5 rounded-xl border border-stone-300 bg-white"
+                    >
+                      {(citiesData[city] || []).map((a) => (
+                        <option key={a.id} value={a.locality}>
+                          {a.locality} ({a.pincode})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -380,7 +483,7 @@ export default function ProviderOnboardingPage() {
                     value={pincode}
                     onChange={(e) => setPincode(e.target.value)}
                     placeholder="e.g. 411038"
-                    className="w-full p-2.5 rounded-xl border border-stone-300"
+                    className="w-full p-2.5 rounded-xl border border-stone-300 font-medium"
                   />
                 </div>
                 <div>
@@ -392,7 +495,7 @@ export default function ProviderOnboardingPage() {
                     max="20"
                     value={deliveryRadiusKm}
                     onChange={(e) => setDeliveryRadiusKm(Number(e.target.value))}
-                    className="w-full p-2.5 rounded-xl border border-stone-300"
+                    className="w-full p-2.5 rounded-xl border border-stone-300 font-medium"
                   />
                 </div>
               </div>

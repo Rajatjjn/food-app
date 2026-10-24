@@ -24,12 +24,26 @@ export function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedCity, setSelectedCity] = useState("Pune");
+  const [availableCities, setAvailableCities] = useState<string[]>(["Pune", "Bengaluru"]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch session on load and route change
+  // Fetch session and cities on load and route change
   useEffect(() => {
     fetchSession();
+    fetchCities();
   }, [pathname]);
+
+  const fetchCities = async () => {
+    try {
+      const res = await fetch("/api/locations");
+      const data = await res.json();
+      if (data.cityNames && data.cityNames.length > 0) {
+        setAvailableCities(data.cityNames);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchSession = async () => {
     try {
@@ -98,8 +112,11 @@ export function Navbar() {
                 }}
                 className="bg-transparent border-none outline-none cursor-pointer pr-1 text-stone-800 font-medium"
               >
-                <option value="Pune">Pune</option>
-                <option value="Bengaluru">Bengaluru</option>
+                {availableCities.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -232,8 +249,11 @@ export function Navbar() {
                 }}
                 className="bg-transparent font-medium"
               >
-                <option value="Pune">Pune</option>
-                <option value="Bengaluru">Bengaluru</option>
+                {availableCities.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
