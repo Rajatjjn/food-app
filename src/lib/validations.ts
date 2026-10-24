@@ -14,6 +14,9 @@ export const registerSchema = z.object({
 });
 
 export const providerOnboardingSchema = z.object({
+  accountName: z.string().min(2, "Chef/Owner name must be at least 2 characters").optional(),
+  accountEmail: z.string().email("Please enter a valid email address").optional(),
+  accountPassword: z.string().min(6, "Password must be at least 6 characters").optional(),
   businessName: z.string().min(3, "Business name must be at least 3 characters"),
   businessType: z.enum(["HOME_COOK", "SMALL_TIFFIN", "MEAL_PROVIDER"]).default("HOME_COOK"),
   description: z.string().min(20, "Please provide a detailed description (min 20 characters)"),

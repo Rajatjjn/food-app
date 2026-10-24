@@ -1,27 +1,40 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChefHat, CheckCircle2, AlertCircle, ArrowRight, ArrowLeft, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { ChefHat, CheckCircle2, AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, User, Lock, Mail, Phone } from "lucide-react";
 
 export default function ProviderOnboardingPage() {
   const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  // Form Fields
+  // Step 1: Account Fields (used if not logged in)
+  const [accountName, setAccountName] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
+  const [accountPassword, setAccountPassword] = useState("");
+
+  // Step 2: Business Profile
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("HOME_COOK");
   const [description, setDescription] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
+
+  // Step 3: Location
   const [city, setCity] = useState("Pune");
   const [locality, setLocality] = useState("Kothrud");
   const [pincode, setPincode] = useState("411038");
   const [fullAddress, setFullAddress] = useState("");
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(5.0);
+
+  // Step 4: Food & Schedule
   const [isVegetarianOnly, setIsVegetarianOnly] = useState(true);
   const [dietaryCategories, setDietaryCategories] = useState<string[]>(["VEG"]);
   const [operatesLunch, setOperatesLunch] = useState(true);
@@ -29,9 +42,50 @@ export default function ProviderOnboardingPage() {
   const [lunchCutoffTime, setLunchCutoffTime] = useState("10:30");
   const [dinnerCutoffTime, setDinnerCutoffTime] = useState("18:30");
 
+  useEffect(() => {
+    checkAuthSession();
+  }, []);
+
+  const checkAuthSession = async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      const data = await res.json();
+      if (data.user) {
+        setCurrentUser(data.user);
+        setAccountName(data.user.name || "");
+        setAccountEmail(data.user.email || "");
+        setContactPhone(data.user.phone || "");
+        setWhatsappNumber(data.user.phone || "");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCheckingAuth(false);
+    }
+  };
+
   const handleNext = () => {
     setError("");
-    if (step === 1) {
+
+    // If not logged in, Step 1 is Account
+    if (!currentUser && step === 1) {
+      if (!accountName || accountName.length < 2) {
+        setError("Please enter your chef/owner full name");
+        return;
+      }
+      if (!accountEmail || !accountEmail.includes("@")) {
+        setError("Please enter a valid email address");
+        return;
+      }
+      if (!accountPassword || accountPassword.length < 6) {
+        setError("Password must be at least 6 characters");
+        return;
+      }
+    }
+
+    // Business Profile Validation (Step 1 if logged in, Step 2 if guest)
+    const isProfileStep = currentUser ? step === 1 : step === 2;
+    if (isProfileStep) {
       if (!businessName || businessName.length < 3) {
         setError("Please enter a valid business/kitchen name (min 3 characters)");
         return;
@@ -45,12 +99,16 @@ export default function ProviderOnboardingPage() {
         return;
       }
     }
-    if (step === 2) {
+
+    // Location Validation (Step 2 if logged in, Step 3 if guest)
+    const isLocationStep = currentUser ? step === 2 : step === 3;
+    if (isLocationStep) {
       if (!city || !locality || !pincode) {
         setError("City, locality, and pincode are required");
         return;
       }
     }
+
     setStep((prev) => prev + 1);
   };
 
@@ -58,27 +116,35 @@ export default function ProviderOnboardingPage() {
     setLoading(true);
     setError("");
     try {
+      const payload: any = {
+        businessName,
+        businessType,
+        description,
+        contactPhone,
+        whatsappNumber,
+        city,
+        locality,
+        pincode,
+        fullAddress,
+        deliveryRadiusKm: Number(deliveryRadiusKm),
+        isVegetarianOnly,
+        dietaryCategories,
+        operatesLunch,
+        operatesDinner,
+        lunchCutoffTime,
+        dinnerCutoffTime,
+      };
+
+      if (!currentUser) {
+        payload.accountName = accountName;
+        payload.accountEmail = accountEmail;
+        payload.accountPassword = accountPassword;
+      }
+
       const res = await fetch("/api/provider/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          businessName,
-          businessType,
-          description,
-          contactPhone,
-          whatsappNumber,
-          city,
-          locality,
-          pincode,
-          fullAddress,
-          deliveryRadiusKm: Number(deliveryRadiusKm),
-          isVegetarianOnly,
-          dietaryCategories,
-          operatesLunch,
-          operatesDinner,
-          lunchCutoffTime,
-          dinnerCutoffTime,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -94,6 +160,8 @@ export default function ProviderOnboardingPage() {
     }
   };
 
+  const totalSteps = currentUser ? 4 : 5;
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
       {/* Wizard Header */}
@@ -105,7 +173,7 @@ export default function ProviderOnboardingPage() {
           List Your Kitchen on Tiffin Finder
         </h1>
         <p className="text-xs text-stone-500">
-          Step {step} of 4 • Fast registration for home cooks and meal businesses
+          Step {step} of {totalSteps} • Fast registration for home cooks and meal businesses
         </p>
       </div>
 
@@ -144,12 +212,68 @@ export default function ProviderOnboardingPage() {
             </div>
           )}
 
-          {/* STEP 1: BUSINESS PROFILE */}
-          {step === 1 && (
+          {/* IF NOT LOGGED IN: STEP 1 IS ACCOUNT SETUP */}
+          {!currentUser && step === 1 && (
+            <div className="space-y-4 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+                <h3 className="font-bold text-sm text-stone-900">1. Account Details</h3>
+                <Link href="/login" className="text-brand-600 font-semibold hover:underline">
+                  Already have an account? Sign in
+                </Link>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Chef / Owner Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={accountName}
+                  onChange={(e) => setAccountName(e.target.value)}
+                  placeholder="e.g. Mukesh Sharma"
+                  className="w-full p-2.5 rounded-xl border border-stone-300 focus:outline-none focus:border-brand-500 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Email Address *</label>
+                <input
+                  type="email"
+                  required
+                  value={accountEmail}
+                  onChange={(e) => setAccountEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full p-2.5 rounded-xl border border-stone-300 focus:outline-none focus:border-brand-500 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1">Create Password (min 6 characters) *</label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={accountPassword}
+                  onChange={(e) => setAccountPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full p-2.5 rounded-xl border border-stone-300 focus:outline-none focus:border-brand-500 font-medium"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* BUSINESS PROFILE (Step 1 if logged in, Step 2 if guest) */}
+          {((currentUser && step === 1) || (!currentUser && step === 2)) && (
             <div className="space-y-4 text-xs">
               <h3 className="font-bold text-sm text-stone-900 pb-2 border-b border-stone-100">
-                1. Kitchen & Contact Details
+                {currentUser ? "1" : "2"}. Kitchen Profile & Contact
               </h3>
+
+              {currentUser && (
+                <div className="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200/60 text-stone-700 flex items-center justify-between">
+                  <span>Logged in as: <strong>{currentUser.name}</strong> ({currentUser.email})</span>
+                  <span className="text-[10px] uppercase font-bold text-amber-800">Verified Session</span>
+                </div>
+              )}
 
               <div>
                 <label className="block font-semibold mb-1">Business / Kitchen Name *</label>
@@ -158,7 +282,7 @@ export default function ProviderOnboardingPage() {
                   required
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
-                  placeholder="e.g. Annapurna Ghar Ka Khana"
+                  placeholder="e.g. Mukesh Bhai Ka Khana"
                   className="w-full p-2.5 rounded-xl border border-stone-300 focus:outline-none focus:border-brand-500 font-medium"
                 />
               </div>
@@ -215,11 +339,11 @@ export default function ProviderOnboardingPage() {
             </div>
           )}
 
-          {/* STEP 2: LOCATION & SERVICE RADIUS */}
-          {step === 2 && (
+          {/* LOCATION & SERVICE AREAS (Step 2 if logged in, Step 3 if guest) */}
+          {((currentUser && step === 2) || (!currentUser && step === 3)) && (
             <div className="space-y-4 text-xs">
               <h3 className="font-bold text-sm text-stone-900 pb-2 border-b border-stone-100">
-                2. Location & Delivery Radius
+                {currentUser ? "2" : "3"}. Location & Service Radius
               </h3>
 
               <div className="grid grid-cols-2 gap-3">
@@ -286,11 +410,11 @@ export default function ProviderOnboardingPage() {
             </div>
           )}
 
-          {/* STEP 3: FOOD & OPERATING SCHEDULE */}
-          {step === 3 && (
+          {/* FOOD & OPERATING SCHEDULE (Step 3 if logged in, Step 4 if guest) */}
+          {((currentUser && step === 3) || (!currentUser && step === 4)) && (
             <div className="space-y-4 text-xs">
               <h3 className="font-bold text-sm text-stone-900 pb-2 border-b border-stone-100">
-                3. Dietary & Meal Timings
+                {currentUser ? "3" : "4"}. Dietary & Meal Timings
               </h3>
 
               <div className="space-y-2">
@@ -328,21 +452,27 @@ export default function ProviderOnboardingPage() {
             </div>
           )}
 
-          {/* STEP 4: REVIEW & SUBMISSION */}
-          {step === 4 && (
+          {/* REVIEW & SUBMISSION (Step 4 if logged in, Step 5 if guest) */}
+          {step === totalSteps && (
             <div className="space-y-4 text-xs">
               <h3 className="font-bold text-sm text-stone-900 pb-2 border-b border-stone-100">
-                4. Review & Confirmation
+                {totalSteps}. Review & Confirmation
               </h3>
 
               <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-2">
+                {!currentUser && (
+                  <div className="flex justify-between pb-1 border-b border-stone-200">
+                    <span className="text-stone-500">Account:</span>
+                    <span className="font-bold text-stone-900">{accountName} ({accountEmail})</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-stone-500">Kitchen Name:</span>
                   <span className="font-bold text-stone-900">{businessName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-stone-500">Locality:</span>
-                  <span className="font-bold text-stone-900">{locality}, {city}</span>
+                  <span className="font-bold text-stone-900">{locality}, {city} ({pincode})</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-stone-500">Contact:</span>
@@ -377,7 +507,7 @@ export default function ProviderOnboardingPage() {
               </button>
             ) : <div />}
 
-            {step < 4 ? (
+            {step < totalSteps ? (
               <button
                 type="button"
                 onClick={handleNext}
