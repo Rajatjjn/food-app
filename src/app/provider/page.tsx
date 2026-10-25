@@ -538,7 +538,7 @@ export default function ProviderOverviewPage() {
                     Quick-add popular localities in {locationForm.city}:
                   </span>
                   <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-2 bg-stone-50 rounded-xl border border-stone-200">
-                    {currentAvailableAreas.map((loc) => {
+                    {currentAvailableAreas.map((loc: { id: string; locality: string; pincode: string }) => {
                       const isAdded = locationForm.serviceAreas.some(
                         (sa) => sa.locality.toLowerCase() === loc.locality.toLowerCase()
                       );

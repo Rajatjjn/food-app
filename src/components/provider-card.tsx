@@ -7,32 +7,34 @@ import { Star, ShieldCheck, MapPin, Clock, MessageSquare, ArrowRight, Utensils, 
 import { formatCurrency, formatDietaryTags, getDietaryBadgeDetails } from "@/lib/formatters";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 
-interface ProviderCardProps {
-  provider: {
-    id: string;
-    businessName: string;
-    slug: string;
-    businessType: string;
-    description: string;
-    city: string;
-    locality: string;
-    startingPriceMinor: number;
-    verifiedBadge: boolean;
-    profileImage?: string | null;
-    coverImage?: string | null;
-    whatsappNumber: string;
-    averageRating: number;
-    reviewCount: number;
-    hasTrialAvailable: boolean;
-    hasTodayMenu: boolean;
-    dietaryCategories?: string;
-    isVegetarianOnly?: boolean;
-    todayLunchMenu?: {
-      title: string;
-      priceMinor: number;
-      cutoffTime?: string;
-    } | null;
-  };
+export interface ProviderCardData {
+  id: string;
+  businessName: string;
+  slug: string;
+  businessType: string;
+  description: string;
+  city: string;
+  locality: string;
+  startingPriceMinor: number;
+  verifiedBadge: boolean;
+  profileImage?: string | null;
+  coverImage?: string | null;
+  whatsappNumber: string;
+  averageRating: number;
+  reviewCount: number;
+  hasTrialAvailable: boolean;
+  hasTodayMenu: boolean;
+  dietaryCategories?: string;
+  isVegetarianOnly?: boolean;
+  todayLunchMenu?: {
+    title: string;
+    priceMinor: number;
+    cutoffTime?: string;
+  } | null;
+}
+
+export interface ProviderCardProps {
+  provider: ProviderCardData;
 }
 
 export function ProviderCard({ provider }: ProviderCardProps) {

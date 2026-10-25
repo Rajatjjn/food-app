@@ -501,7 +501,7 @@ export default function CustomerDashboardPage() {
                 <div className="mt-2">
                   <span className="text-[11px] text-stone-400 block mb-1">Known areas in {profileForm.preferredCity}:</span>
                   <div className="flex flex-wrap gap-1">
-                    {locationDirectory.cities[profileForm.preferredCity].slice(0, 8).map((loc) => (
+                    {locationDirectory.cities[profileForm.preferredCity].slice(0, 8).map((loc: { id: string; locality: string; pincode: string }) => (
                       <button
                         key={loc.id}
                         type="button"

@@ -16,7 +16,14 @@ import {
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getBusinessDateString } from "@/lib/time";
-import { ProviderCard } from "@/components/provider-card";
+import { ProviderCard, ProviderCardData } from "@/components/provider-card";
+
+interface CityAreaItem {
+  id: string;
+  city: string;
+  locality: string;
+  pincode: string;
+}
 
 export const revalidate = 60; // Refresh every minute
 
@@ -63,7 +70,7 @@ export default async function HomePage() {
   });
 
   // Map to ProviderCard friendly props
-  const mapProvider = (provider: any) => {
+  const mapProvider = (provider: any): ProviderCardData => {
     const reviewCount = provider.reviews.length;
     const averageRating =
       reviewCount > 0
@@ -106,8 +113,8 @@ export default async function HomePage() {
     };
   };
 
-  const formattedFeatured = featuredProviders.map(mapProvider);
-  const formattedToday = todayUpdatedProviders.map(mapProvider);
+  const formattedFeatured: ProviderCardData[] = featuredProviders.map(mapProvider);
+  const formattedToday: ProviderCardData[] = todayUpdatedProviders.map(mapProvider);
 
   // Query dynamic locations from database with real provider count
   const dbLocations = await prisma.location.findMany({
@@ -117,7 +124,7 @@ export default async function HomePage() {
   });
 
   const popularLocalities = await Promise.all(
-    dbLocations.map(async (loc) => {
+    dbLocations.map(async (loc: CityAreaItem) => {
       const count = await prisma.providerProfile.count({
         where: {
           status: "APPROVED",
@@ -244,7 +251,7 @@ export default async function HomePage() {
 
         {formattedToday.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {formattedToday.map((provider) => (
+            {formattedToday.map((provider: ProviderCardData) => (
               <ProviderCard key={provider.id} provider={provider} />
             ))}
           </div>
@@ -280,7 +287,7 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {formattedFeatured.map((provider) => (
+          {formattedFeatured.map((provider: ProviderCardData) => (
             <ProviderCard key={provider.id} provider={provider} />
           ))}
         </div>
@@ -340,7 +347,7 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {popularLocalities.map((loc, idx) => (
+          {popularLocalities.map((loc: { name: string; city: string; count: string }, idx: number) => (
             <Link
               key={idx}
               href={`/tiffins?city=${loc.city}&locality=${encodeURIComponent(loc.name)}`}

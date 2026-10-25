@@ -15,7 +15,7 @@ import {
   ArrowUpDown,
   RotateCcw,
 } from "lucide-react";
-import { ProviderCard } from "@/components/provider-card";
+import { ProviderCard, ProviderCardData } from "@/components/provider-card";
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -33,7 +33,7 @@ function SearchContent() {
   const [updatedToday, setUpdatedToday] = useState(searchParams.get("updatedToday") === "true");
   const [sortBy, setSortBy] = useState(searchParams.get("sortBy") || "relevance");
 
-  const [providers, setProviders] = useState<any[]>([]);
+  const [providers, setProviders] = useState<ProviderCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
@@ -225,7 +225,7 @@ function SearchContent() {
                 className="w-full text-xs p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-800"
               >
                 <option value="">All Localities in {city}</option>
-                {(citiesData[city] || []).map((loc) => (
+                {(citiesData[city] || []).map((loc: string) => (
                   <option key={loc} value={loc}>
                     {loc}
                   </option>
@@ -370,7 +370,7 @@ function SearchContent() {
             </div>
           ) : providers.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {providers.map((provider) => (
+              {providers.map((provider: ProviderCardData) => (
                 <ProviderCard key={provider.id} provider={provider} />
               ))}
             </div>
@@ -432,7 +432,7 @@ function SearchContent() {
                   className="w-full p-2 border rounded-lg bg-white"
                 >
                   <option value="">All Localities in {city}</option>
-                  {(citiesData[city] || []).map((loc) => (
+                  {(citiesData[city] || []).map((loc: string) => (
                     <option key={loc} value={loc}>
                       {loc}
                     </option>
