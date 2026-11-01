@@ -45,8 +45,8 @@ export default function AboutPage() {
       <div className="p-8 rounded-3xl bg-amber-50 border border-amber-200/80 space-y-4">
         <h2 className="text-xl font-bold text-stone-900">Our Launch Cities</h2>
         <p className="text-xs sm:text-sm text-stone-700 leading-relaxed">
-          Currently serving key educational and IT hubs across <strong>Pune</strong> (Kothrud, Baner, Hinjawadi Phase 1, Viman Nagar)
-          and expanding in <strong>Bengaluru</strong> (Koramangala, HSR Layout, Indiranagar).
+          Currently serving key educational and IT hubs across <strong>Pune</strong> (Kothrud, Baner, Hinjawadi Phase 1, Viman Nagar),
+          <strong>Bengaluru</strong> (Koramangala, HSR Layout, Indiranagar), and <strong>Surat</strong> (Adajan, Vesu, City Light, Piplod).
         </p>
         <div className="pt-2">
           <Link

@@ -24,7 +24,7 @@ export function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedCity, setSelectedCity] = useState("Pune");
-  const [availableCities, setAvailableCities] = useState<string[]>(["Pune", "Bengaluru"]);
+  const [availableCities, setAvailableCities] = useState<string[]>(["Pune", "Bengaluru", "Surat"]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Fetch session and cities on load and route change
@@ -81,11 +81,15 @@ export function Navbar() {
     return "/customer";
   };
 
+  const isProvider = user?.role === "PROVIDER" || pathname.startsWith("/provider");
+  const isAdmin = user?.role === "ADMIN" || pathname.startsWith("/admin");
+  const showCitySelector = !isProvider && !isAdmin;
+
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-stone-200/80 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo & City Selector */}
+          {/* Logo & City Selector / Role Badge */}
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-2.5 group">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
@@ -101,54 +105,143 @@ export function Navbar() {
               </div>
             </Link>
 
-            {/* City Selector Pill */}
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 border border-stone-200 text-xs font-medium text-stone-700">
-              <MapPin className="w-3.5 h-3.5 text-brand-600" />
-              <select
-                value={selectedCity}
-                onChange={(e) => {
-                  setSelectedCity(e.target.value);
-                  router.push(`/tiffins?city=${e.target.value}`);
-                }}
-                className="bg-transparent border-none outline-none cursor-pointer pr-1 text-stone-800 font-medium"
-              >
-                {availableCities.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* City Selector Pill for Customers/Guests only */}
+            {showCitySelector && (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 border border-stone-200 text-xs font-medium text-stone-700">
+                <MapPin className="w-3.5 h-3.5 text-brand-600" />
+                <select
+                  value={selectedCity}
+                  onChange={(e) => {
+                    setSelectedCity(e.target.value);
+                    router.push(`/tiffins?city=${e.target.value}`);
+                  }}
+                  className="bg-transparent border-none outline-none cursor-pointer pr-1 text-stone-800 font-medium"
+                >
+                  {availableCities.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Role indicator badges for Provider & Admin */}
+            {isProvider && (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900 shadow-xs">
+                <ChefHat className="w-3.5 h-3.5 text-brand-600" />
+                <span>Kitchen Portal</span>
+              </div>
+            )}
+
+            {isAdmin && (
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-xs font-semibold text-purple-900 shadow-xs">
+                <Shield className="w-3.5 h-3.5 text-purple-600" />
+                <span>Admin Console</span>
+              </div>
+            )}
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-stone-600">
-            <Link
-              href="/tiffins"
-              className={`hover:text-brand-600 transition-colors flex items-center gap-1.5 ${
-                pathname === "/tiffins" ? "text-brand-600 font-semibold" : ""
-              }`}
-            >
-              <Search className="w-4 h-4" />
-              Explore Tiffins
-            </Link>
-            <Link
-              href="/how-it-works"
-              className={`hover:text-brand-600 transition-colors ${
-                pathname === "/how-it-works" ? "text-brand-600 font-semibold" : ""
-              }`}
-            >
-              How It Works
-            </Link>
-            <Link
-              href="/about"
-              className={`hover:text-brand-600 transition-colors ${
-                pathname === "/about" ? "text-brand-600 font-semibold" : ""
-              }`}
-            >
-              About
-            </Link>
-          </nav>
+          {isProvider ? (
+            <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-stone-600">
+              <Link
+                href="/provider"
+                className={`hover:text-brand-600 transition-colors ${
+                  pathname === "/provider" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                Kitchen Overview
+              </Link>
+              <Link
+                href="/provider/menus"
+                className={`hover:text-brand-600 transition-colors ${
+                  pathname === "/provider/menus" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                Daily Menus
+              </Link>
+              <Link
+                href="/provider/plans"
+                className={`hover:text-brand-600 transition-colors ${
+                  pathname === "/provider/plans" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                Meal Plans
+              </Link>
+              <Link
+                href="/provider/trials"
+                className={`hover:text-brand-600 transition-colors ${
+                  pathname === "/provider/trials" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                Trial Requests
+              </Link>
+              <Link
+                href="/provider/enquiries"
+                className={`hover:text-brand-600 transition-colors ${
+                  pathname === "/provider/enquiries" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                Enquiries
+              </Link>
+            </nav>
+          ) : isAdmin ? (
+            <nav className="hidden md:flex items-center gap-5 text-sm font-medium text-stone-600">
+              <Link
+                href="/admin"
+                className={`hover:text-brand-600 transition-colors ${
+                  pathname === "/admin" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                Dashboard & Metrics
+              </Link>
+              <Link
+                href="/tiffins"
+                className={`hover:text-brand-600 transition-colors ${
+                  pathname === "/tiffins" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                All Kitchens
+              </Link>
+              <Link
+                href="/about"
+                className={`hover:text-brand-600 transition-colors ${
+                  pathname === "/about" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                About
+              </Link>
+            </nav>
+          ) : (
+            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-stone-600">
+              <Link
+                href="/tiffins"
+                className={`hover:text-brand-600 transition-colors flex items-center gap-1.5 ${
+                  pathname === "/tiffins" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                <Search className="w-4 h-4" />
+                Explore Tiffins
+              </Link>
+              <Link
+                href="/how-it-works"
+                className={`hover:text-brand-600 transition-colors ${
+                  pathname === "/how-it-works" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                How It Works
+              </Link>
+              <Link
+                href="/about"
+                className={`hover:text-brand-600 transition-colors ${
+                  pathname === "/about" ? "text-brand-600 font-semibold" : ""
+                }`}
+              >
+                About
+              </Link>
+            </nav>
+          )}
 
           {/* User Auth & Actions */}
           <div className="hidden md:flex items-center gap-3">
@@ -236,49 +329,107 @@ export function Navbar() {
       {/* Mobile Drawer */}
       {isMobileMenuOpen && (
         <div className="md:hidden border-t border-stone-200 bg-white px-4 pt-3 pb-6 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-            <span className="text-xs font-semibold text-stone-500 uppercase">City</span>
-            <div className="flex items-center gap-1 text-sm font-medium text-stone-800">
-              <MapPin className="w-4 h-4 text-brand-600" />
-              <select
-                value={selectedCity}
-                onChange={(e) => {
-                  setSelectedCity(e.target.value);
-                  setIsMobileMenuOpen(false);
-                  router.push(`/tiffins?city=${e.target.value}`);
-                }}
-                className="bg-transparent font-medium"
-              >
-                {availableCities.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+          {showCitySelector ? (
+            <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+              <span className="text-xs font-semibold text-stone-500 uppercase">City</span>
+              <div className="flex items-center gap-1 text-sm font-medium text-stone-800">
+                <MapPin className="w-4 h-4 text-brand-600" />
+                <select
+                  value={selectedCity}
+                  onChange={(e) => {
+                    setSelectedCity(e.target.value);
+                    setIsMobileMenuOpen(false);
+                    router.push(`/tiffins?city=${e.target.value}`);
+                  }}
+                  className="bg-transparent font-medium"
+                >
+                  {availableCities.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          ) : isProvider ? (
+            <div className="flex items-center justify-between pb-2 border-b border-stone-100 text-xs">
+              <span className="font-semibold text-amber-900 flex items-center gap-1.5">
+                <ChefHat className="w-4 h-4 text-brand-600" />
+                Kitchen Provider Portal
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between pb-2 border-b border-stone-100 text-xs">
+              <span className="font-semibold text-purple-900 flex items-center gap-1.5">
+                <Shield className="w-4 h-4 text-purple-600" />
+                Admin Console
+              </span>
+            </div>
+          )}
 
-          <Link
-            href="/tiffins"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
-          >
-            Explore Tiffins
-          </Link>
-          <Link
-            href="/how-it-works"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
-          >
-            How It Works
-          </Link>
-          <Link
-            href="/about"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
-          >
-            About Us
-          </Link>
+          {isProvider ? (
+            <>
+              <Link
+                href="/provider"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
+              >
+                Kitchen Overview
+              </Link>
+              <Link
+                href="/provider/menus"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
+              >
+                Daily Menus
+              </Link>
+              <Link
+                href="/provider/plans"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
+              >
+                Meal Plans
+              </Link>
+              <Link
+                href="/provider/trials"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
+              >
+                Trial Requests
+              </Link>
+              <Link
+                href="/provider/enquiries"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
+              >
+                Enquiries
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/tiffins"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
+              >
+                Explore Tiffins
+              </Link>
+              <Link
+                href="/how-it-works"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
+              >
+                How It Works
+              </Link>
+              <Link
+                href="/about"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-base font-medium text-stone-700 hover:text-brand-600"
+              >
+                About Us
+              </Link>
+            </>
+          )}
 
           <div className="pt-3 border-t border-stone-100 space-y-2">
             {user ? (

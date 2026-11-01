@@ -19,7 +19,7 @@ export function Footer() {
             </Link>
             <p className="text-sm text-stone-400 max-w-sm leading-relaxed">
               Connecting students, bachelors, and working professionals with verified, authentic home-style meal providers
-              and daily tiffin services in Pune and Bengaluru.
+              and daily tiffin services in Pune, Bengaluru, and Surat.
             </p>
             <div className="flex items-center gap-2 text-xs text-stone-400">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
@@ -39,6 +39,11 @@ export function Footer() {
               <li>
                 <Link href="/tiffins?city=Bengaluru" className="hover:text-white transition-colors">
                   Tiffins in Bengaluru
+                </Link>
+              </li>
+              <li>
+                <Link href="/tiffins?city=Surat" className="hover:text-white transition-colors">
+                  Tiffins in Surat
                 </Link>
               </li>
               <li>

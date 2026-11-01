@@ -23,7 +23,7 @@ function SearchContent() {
 
   // Filter States
   const [query, setQuery] = useState(searchParams.get("q") || "");
-  const [city, setCity] = useState(searchParams.get("city") || "Pune");
+  const [city, setCity] = useState(searchParams.get("city") || (searchParams.get("q") ? "" : "Pune"));
   const [locality, setLocality] = useState(searchParams.get("locality") || "");
   const [mealType, setMealType] = useState(searchParams.get("mealType") || "");
   const [dietary, setDietary] = useState(searchParams.get("dietary") || "");
@@ -41,8 +41,9 @@ function SearchContent() {
   const [citiesData, setCitiesData] = useState<Record<string, string[]>>({
     Pune: ["Kothrud", "Baner", "Hinjawadi Phase 1", "Viman Nagar", "Kalyani Nagar", "Karve Nagar", "Wakad"],
     Bengaluru: ["Koramangala", "HSR Layout", "Indiranagar"],
+    Surat: ["Adajan", "Vesu", "City Light", "Piplod", "Pal", "Ghod Dod Road", "Althan", "Varachha", "Katargam", "Athwa Lines"],
   });
-  const [cityNames, setCityNames] = useState<string[]>(["Pune", "Bengaluru"]);
+  const [cityNames, setCityNames] = useState<string[]>(["Pune", "Bengaluru", "Surat"]);
 
   useEffect(() => {
     fetchLocations();
@@ -73,7 +74,7 @@ function SearchContent() {
     setLoading(true);
     try {
       const params = new URLSearchParams(searchParams.toString());
-      if (!params.has("city")) params.set("city", city);
+      if (city && !params.has("city")) params.set("city", city);
 
       const res = await fetch(`/api/tiffins?${params.toString()}`);
       const data = await res.json();
@@ -207,6 +208,7 @@ function SearchContent() {
                 }}
                 className="w-full text-xs p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-800 font-medium"
               >
+                <option value="">All Cities</option>
                 {cityNames.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -217,19 +219,28 @@ function SearchContent() {
 
             <div>
               <label className="text-xs font-bold uppercase tracking-wider text-stone-500 block mb-1">
-                Locality / Area ({city})
+                Locality / Area {city ? `(${city})` : ""}
               </label>
               <select
                 value={locality}
                 onChange={(e) => setLocality(e.target.value)}
                 className="w-full text-xs p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-800"
               >
-                <option value="">All Localities in {city}</option>
-                {(citiesData[city] || []).map((loc: string) => (
-                  <option key={loc} value={loc}>
-                    {loc}
-                  </option>
-                ))}
+                <option value="">{city ? `All Localities in ${city}` : "All Localities"}</option>
+                {city
+                  ? (citiesData[city] || []).map((loc: string) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))
+                  : Object.values(citiesData)
+                      .flat()
+                      .filter((val, idx, arr) => arr.indexOf(val) === idx)
+                      .map((loc: string) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
               </select>
             </div>
           </div>
@@ -416,6 +427,7 @@ function SearchContent() {
                   }}
                   className="w-full p-2 border rounded-lg bg-white"
                 >
+                  <option value="">All Cities</option>
                   {cityNames.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -425,18 +437,27 @@ function SearchContent() {
               </div>
 
               <div>
-                <label className="block font-semibold mb-1">Locality ({city})</label>
+                <label className="block font-semibold mb-1">Locality {city ? `(${city})` : ""}</label>
                 <select
                   value={locality}
                   onChange={(e) => setLocality(e.target.value)}
                   className="w-full p-2 border rounded-lg bg-white"
                 >
-                  <option value="">All Localities in {city}</option>
-                  {(citiesData[city] || []).map((loc: string) => (
-                    <option key={loc} value={loc}>
-                      {loc}
-                    </option>
-                  ))}
+                  <option value="">{city ? `All Localities in ${city}` : "All Localities"}</option>
+                  {city
+                    ? (citiesData[city] || []).map((loc: string) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))
+                    : Object.values(citiesData)
+                        .flat()
+                        .filter((val, idx, arr) => arr.indexOf(val) === idx)
+                        .map((loc: string) => (
+                          <option key={loc} value={loc}>
+                            {loc}
+                          </option>
+                        ))}
                 </select>
               </div>
 

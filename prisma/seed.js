@@ -53,7 +53,7 @@ async function main() {
     ]
   });
 
-  // 2. Locations (Pune & Bengaluru)
+  // 2. Locations (Pune, Bengaluru & Surat)
   const locations = [
     { city: 'Pune', locality: 'Kothrud', pincode: '411038', state: 'Maharashtra' },
     { city: 'Pune', locality: 'Baner', pincode: '411045', state: 'Maharashtra' },
@@ -65,6 +65,16 @@ async function main() {
     { city: 'Bengaluru', locality: 'Koramangala', pincode: '560034', state: 'Karnataka' },
     { city: 'Bengaluru', locality: 'HSR Layout', pincode: '560102', state: 'Karnataka' },
     { city: 'Bengaluru', locality: 'Indiranagar', pincode: '560038', state: 'Karnataka' },
+    { city: 'Surat', locality: 'Adajan', pincode: '395009', state: 'Gujarat' },
+    { city: 'Surat', locality: 'Vesu', pincode: '395007', state: 'Gujarat' },
+    { city: 'Surat', locality: 'City Light', pincode: '395007', state: 'Gujarat' },
+    { city: 'Surat', locality: 'Piplod', pincode: '395007', state: 'Gujarat' },
+    { city: 'Surat', locality: 'Pal', pincode: '395009', state: 'Gujarat' },
+    { city: 'Surat', locality: 'Ghod Dod Road', pincode: '395007', state: 'Gujarat' },
+    { city: 'Surat', locality: 'Althan', pincode: '395017', state: 'Gujarat' },
+    { city: 'Surat', locality: 'Varachha', pincode: '395006', state: 'Gujarat' },
+    { city: 'Surat', locality: 'Katargam', pincode: '395004', state: 'Gujarat' },
+    { city: 'Surat', locality: 'Athwa Lines', pincode: '395001', state: 'Gujarat' },
   ];
   for (const loc of locations) {
     await prisma.location.create({ data: loc });

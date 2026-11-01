@@ -1,5 +1,5 @@
 import React from "react";
-import { Mail, Phone, MapPin, MessageSquare, Clock } from "lucide-react";
+import { Mail, Phone, MessageSquare } from "lucide-react";
 
 export default function ContactPage() {
   return (
@@ -11,28 +11,32 @@ export default function ContactPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-xs space-y-2">
-          <Mail className="w-5 h-5 text-brand-600" />
-          <h3 className="font-bold text-sm text-stone-900">Email Support</h3>
-          <p className="text-xs text-stone-600">support@tiffinfinder.com</p>
+      <div className="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <a
+          href="mailto:rajatjjn0510@gmail.com"
+          className="p-6 rounded-2xl bg-white border border-stone-200 shadow-xs space-y-2 hover:border-brand-400 hover:shadow-subtle transition-all block group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <Mail className="w-5 h-5" />
+          </div>
+          <h3 className="font-bold text-sm text-stone-900 pt-1">Email Support</h3>
+          <p className="text-xs font-medium text-brand-600 hover:underline">rajatjjn0510@gmail.com</p>
           <span className="text-[11px] text-stone-400 block pt-1">Response within 24 hours</span>
-        </div>
+        </a>
 
-        <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-xs space-y-2">
-          <Phone className="w-5 h-5 text-emerald-600" />
-          <h3 className="font-bold text-sm text-stone-900">Provider Help Desk</h3>
-          <p className="text-xs text-stone-600">+91 98765 43210</p>
+        <a
+          href="tel:+917742552333"
+          className="p-6 rounded-2xl bg-white border border-stone-200 shadow-xs space-y-2 hover:border-emerald-400 hover:shadow-subtle transition-all block group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+            <Phone className="w-5 h-5" />
+          </div>
+          <h3 className="font-bold text-sm text-stone-900 pt-1">Provider & Help Desk</h3>
+          <p className="text-xs font-medium text-emerald-700">+91 77425 52333</p>
           <span className="text-[11px] text-stone-400 block pt-1">Mon-Sat, 9:00 AM – 7:00 PM</span>
-        </div>
-
-        <div className="p-6 rounded-2xl bg-white border border-stone-200 shadow-xs space-y-2">
-          <MapPin className="w-5 h-5 text-amber-600" />
-          <h3 className="font-bold text-sm text-stone-900">Operating Headquarters</h3>
-          <p className="text-xs text-stone-600">Kothrud, Pune, Maharashtra 411038</p>
-          <span className="text-[11px] text-stone-400 block pt-1">India</span>
-        </div>
+        </a>
       </div>
     </div>
   );
 }
+

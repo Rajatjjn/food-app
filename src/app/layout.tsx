@@ -6,14 +6,16 @@ import { Footer } from "@/components/footer";
 export const metadata: Metadata = {
   title: "Tiffin Finder — Find Your Everyday Home-Style Food",
   description:
-    "Discover affordable, reliable, home-style daily tiffin services, thalis, and meal plans for students and working professionals in Pune and Bengaluru.",
+    "Discover affordable, reliable, home-style daily tiffin services, thalis, and meal plans for students and working professionals in Pune, Bengaluru, and Surat.",
   keywords: [
     "tiffin service",
     "home cooked food",
     "daily thali",
     "pune tiffins",
     "bengaluru tiffin",
+    "surat tiffins",
     "jain tiffin",
+    "gujarati tiffin",
     "veg meal subscription",
   ],
 };

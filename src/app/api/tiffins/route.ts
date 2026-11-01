@@ -5,9 +5,10 @@ import { getBusinessDateString } from "@/lib/time";
 export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
-    const query = searchParams.get("q") || "";
-    const city = searchParams.get("city") || "Pune";
-    const locality = searchParams.get("locality");
+    const query = searchParams.get("q")?.trim() || "";
+    const rawCity = searchParams.get("city");
+    const city = rawCity && rawCity !== "All" && rawCity !== "" ? rawCity.trim() : null;
+    const locality = searchParams.get("locality")?.trim();
     const mealType = searchParams.get("mealType"); // LUNCH, DINNER
     const dietary = searchParams.get("dietary"); // VEG, JAIN, NON_VEG
     const planType = searchParams.get("planType"); // SINGLE_MEAL, WEEKLY, MONTHLY
@@ -21,26 +22,37 @@ export async function GET(req: NextRequest) {
     const todayDate = getBusinessDateString(0);
 
     // Build Prisma query filters
-    const whereClause: any = {
-      status: "APPROVED",
-      city: { equals: city },
-    };
+    const andClauses: any[] = [{ status: "APPROVED" }];
 
-    if (locality && locality !== "All") {
-      whereClause.OR = [
-        { locality: { contains: locality } },
-        { serviceAreas: { some: { locality: { contains: locality } } } },
-      ];
+    if (city) {
+      andClauses.push({ city: { equals: city } });
+    }
+
+    if (locality && locality !== "All" && locality !== "") {
+      andClauses.push({
+        OR: [
+          { locality: { contains: locality } },
+          { serviceAreas: { some: { locality: { contains: locality } } } },
+        ],
+      });
     }
 
     if (query) {
-      whereClause.OR = [
-        { businessName: { contains: query } },
-        { locality: { contains: query } },
-        { description: { contains: query } },
-        { serviceAreas: { some: { locality: { contains: query } } } },
-      ];
+      andClauses.push({
+        OR: [
+          { businessName: { contains: query } },
+          { locality: { contains: query } },
+          { city: { contains: query } },
+          { pincode: { contains: query } },
+          { description: { contains: query } },
+          { serviceAreas: { some: { locality: { contains: query } } } },
+        ],
+      });
     }
+
+    const whereClause: any = {
+      AND: andClauses,
+    };
 
     if (mealType === "LUNCH") {
       whereClause.operatesLunch = true;

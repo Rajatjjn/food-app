@@ -29,7 +29,7 @@ export default function ProviderOnboardingPage() {
 
   // Step 3: Location (Dynamic)
   const [citiesData, setCitiesData] = useState<Record<string, Array<{ id: string; locality: string; pincode: string }>>>({});
-  const [cityNames, setCityNames] = useState<string[]>(["Pune", "Bengaluru"]);
+  const [cityNames, setCityNames] = useState<string[]>(["Pune", "Bengaluru", "Surat"]);
   const [city, setCity] = useState("Pune");
   const [isCustomCity, setIsCustomCity] = useState(false);
   const [locality, setLocality] = useState("Kothrud");
